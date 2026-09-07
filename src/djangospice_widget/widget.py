@@ -80,10 +80,8 @@ class ActionsMixin:
     @classmethod
     def _declared_action_groups(cls) -> dict[str, Actions]:
         groups: dict[str, Actions] = {}
-        for base in cls.__mro__:
+        for base in reversed(cls.__mro__):
             for name, value in base.__dict__.items():
-                if name in groups:
-                    continue
                 if isinstance(value, Actions):
                     groups[name] = value
         return groups
@@ -94,9 +92,12 @@ class ActionsMixin:
         normalized: dict[str, Actions] = {}
 
         for name, actions in groups.items():
-            collection = Actions(*deepcopy(actions.flatten()))
-            setattr(cls, name, collection)
-            normalized[name] = collection
+            if name in cls.__dict__ and isinstance(cls.__dict__[name], Actions):
+                collection = Actions(*deepcopy(actions))
+                setattr(cls, name, collection)
+                normalized[name] = collection
+            else:
+                normalized[name] = actions
 
         cls._actions = cls.merge_actions(*normalized.values())
 
