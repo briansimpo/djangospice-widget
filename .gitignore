@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+
+# Type checking / linters
+.mypy_cache/
+.ruff_cache/
+
+# Environment / secrets
+.env
+.env.*
+*.pem
+
+# IDEs / editors
+.vscode/
+*.code-workspace
+.idea/
+
+# OS files
+.DS_Store
+.AppleDouble
+.Trashes
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Documentation
+docs/_build/
+
+# Misc
+*.log
+*.tmp
+*~

@@ -1,0 +1,76 @@
+[build-system]
+requires = ["hatchling>=1.24.0"]
+build-backend = "hatchling.build"
+
+
+[project]
+name = "djangospice-widget"
+version = "0.1.0"
+
+description = "Reusable, composable, request-aware UI widgets for Django."
+
+readme = "README.md"
+
+requires-python = ">=3.12"
+
+license = { text = "MIT" }
+
+authors = [
+    { name = "Brian Simpokolwe", email = "briansimpokolwe@gmail.com" }
+]
+
+keywords = [
+    "django",
+    "djangospice",
+    "django-widget",
+    "djangospice-widget"
+]
+
+
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+
+    "Framework :: Django",
+    "Framework :: Django :: 5",
+    "Framework :: Django :: 6",
+
+    "Intended Audience :: Developers",
+
+    "License :: OSI Approved :: MIT License",
+
+    "Operating System :: OS Independent",
+
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Internet :: WWW/HTTP",
+]
+
+
+dependencies = [
+    "django>=5.0",
+    "djangospice_framework>=0.1"
+]
+
+
+[project.urls]
+Homepage = "https://github.com/briansimpo/djangospice_widget"
+
+Repository = "https://github.com/briansimpo/djangospice_widget"
+
+Documentation = "https://github.com/briansimpo/djangospice_widget#readme"
+
+Issues = "https://github.com/briansimpo/djangospice_widget/issues"
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/djangospice_widget"]
+
+
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
+
