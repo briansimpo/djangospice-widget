@@ -19,6 +19,7 @@ from .actions import Actions
 from .utils import slugify
 
 if TYPE_CHECKING:
+    from .actions import Action, ActionContext, BoundAction
     from .exceptions import WidgetNotVisible
     from .identifier import WidgetIdentifier
     from .interaction import Interaction
@@ -111,6 +112,12 @@ class ActionsMixin:
 
     def get_action_collection(self) -> Actions:
         return self._actions
+
+    def bind_action(self, action: Action, context: ActionContext) -> BoundAction:
+        return BoundAction(
+            action=action,
+            context=context,
+        )
 
 
 # ==============================================================================
