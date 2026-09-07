@@ -32,7 +32,7 @@ class ActionContext:
         return self.request.user
 
     @property
-    def is_row(self) -> bool:
+    def is_single(self) -> bool:
         return self.object is not None
 
     @property
