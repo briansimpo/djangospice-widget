@@ -8,7 +8,6 @@ Reusable, composable, request-aware UI widgets for Django.
 
 * Class-based and function-based widgets
 * Automatic widget registration
-* Stable widget keys
 * Template-based or direct HTML content
 * Request-aware widgets
 * Query parameters and request data
@@ -24,7 +23,6 @@ Reusable, composable, request-aware UI widgets for Django.
 * Model and queryset support
 * Object and multiple-object selection
 * Optional widget caching
-* Django template tags
 
 ## Installation
 
@@ -129,10 +127,6 @@ Common configuration options include:
 ## Widget Identity
 
 Every widget has a stable widget key:
-
-```python
-widget.widget_key
-```
 
 For example:
 
