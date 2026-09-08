@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import Any, ClassVar
 from urllib.parse import urlencode
 
 from django.apps import apps
@@ -15,17 +15,14 @@ from djangospice_framework.core.payload import Payload
 from djangospice_framework.html.component import HTMLComponent
 from djangospice_framework.response.response import Response
 
-from .actions import Actions
 from .utils import slugify
-
-if TYPE_CHECKING:
-    from .actions import Action, ActionContext, BoundAction
-    from .exceptions import WidgetNotVisible
-    from .identifier import WidgetIdentifier
-    from .interaction import Interaction
-    from .navigation import Navigation
-    from .querystate import QueryState
-    from .conf import APP_NAME_KEY, MODEL_NAME_KEY
+from .actions import Action, Actions, ActionContext, BoundAction
+from .exceptions import WidgetNotVisible
+from .identifier import WidgetIdentifier
+from .interaction import Interaction
+from .navigation import Navigation
+from .querystate import QueryState
+from .conf import APP_NAME_KEY, MODEL_NAME_KEY
 
 
 # ==============================================================================
@@ -282,20 +279,20 @@ class DataMixin:
             )
         return self.model._default_manager.all()
 
-    def get_object(self) -> Model | None:
+    def get_object(self: Widget) -> Model | None:
         pk = self.request_value(self.object_parameter)
         if not pk:
             return None
         return self.get_queryset().filter(pk=pk).first()
 
-    def get_objects(self) -> tuple[Model, ...]:
+    def get_objects(self: Widget) -> tuple[Model, ...]:
         ids = self.request_values(self.objects_parameter)
         if not ids:
             obj = self.get_object()
             return (obj,) if obj else ()
         return tuple(self.get_queryset().filter(pk__in=ids))
 
-    def get_data(self) -> Payload:
+    def get_data(self: Widget) -> Payload:
         data = self.request_data
         if data is None:
             return Payload()
@@ -327,15 +324,8 @@ class NavigationMixin:
         return QueryState.from_querydict(self.request.GET)
 
     @property
-    def base_url(self) -> str:
+    def base_url(self: Widget) -> str:
         return self.endpoint.split("?", 1)[0]
-
-    def url(self: NavigationMixin | Widget, *, state: QueryState | None = None, **params: Any) -> str:
-        state = state or self.query_state
-        for name, value in params.items():
-            state = state.set(name, value)
-        query = state.encode()
-        return f"{self.base_url}?{query}" if query else self.base_url
 
     @property
     def endpoint(self: Widget) -> str:
@@ -363,6 +353,13 @@ class NavigationMixin:
             and match.kwargs.get(MODEL_NAME_KEY) == self.name
         )
 
+    def url(self: Widget, *, state: QueryState | None = None, **params: Any) -> str:
+        state = state or self.query_state
+        for name, value in params.items():
+            state = state.set(name, value)
+        query = state.encode()
+        return f"{self.base_url}?{query}" if query else self.base_url
+    
     def configure_htmx(self: Widget) -> None:
         if self.lazy:
             (
