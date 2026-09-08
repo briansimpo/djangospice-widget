@@ -8,8 +8,7 @@ from djangospice_framework.response.shortcuts import render_response
 
 from .exceptions import WidgetNotVisible
 from .executor import WidgetExecutor
-from .identifier import WidgetIdentifier
-from .registry import WidgetRegistry
+from .resolver import WidgetResolver
 
 
 class WidgetView(View):
@@ -22,18 +21,18 @@ class WidgetView(View):
     """
 
     def dispatch(self, request: HttpRequest, app_name: str, name: str, *args: Any, **kwargs: Any) -> HttpResponse:
-        widget_key = str(WidgetIdentifier(app_name, name))
-
         try:
-            widget_cls = WidgetRegistry.get(widget_key)
-        except KeyError:
-            raise Http404(f"Widget '{widget_key}' not found.")
+            widget_cls = WidgetResolver.resolve(
+                app_name,
+                name,
+            )
+        except LookupError as exc:
+            raise Http404(str(exc)) from exc
 
-        if widget_cls is None:
-            raise Http404(f"Widget '{widget_key}' not found.")
-
-        # Merge URL kwargs with GET query parameters for widget initialization
-        widget_kwargs = {**request.GET.dict(), **kwargs}
+        widget_kwargs = {
+            **request.GET.dict(),
+            **kwargs,
+        }
 
         widget = widget_cls(
             request=request,
@@ -43,6 +42,7 @@ class WidgetView(View):
         try:
             response = WidgetExecutor(widget, request).execute()
         except WidgetNotVisible:
-            raise Http404(f"Widget '{widget_key}' is not accessible.")
-
+            raise Http404(
+                f"Widget '{app_name}:{name}' is not accessible."
+            ) from None
         return render_response(response, request)
