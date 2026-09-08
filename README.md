@@ -1,8 +1,8 @@
-# djangospice_widget
+# djangospice-widget
 
 Reusable, composable, request-aware UI widgets for Django.
 
-`djangospice_widget` provides a declarative widget system for building server-rendered Django interfaces from small, reusable UI units. Widgets can render templates or direct content, accept request data, expose actions, compose other widgets, define named slots, integrate with HTMX, and support lazy loading, refreshing, permissions, and caching.
+`djangospice-widget` provides a declarative widget system for building server-rendered Django interfaces from small, reusable UI units. Widgets can render templates or direct content, accept request data, expose actions, compose other widgets, define named slots, integrate with HTMX, and support lazy loading, refreshing, permissions, and caching.
 
 ## Features
 
@@ -445,15 +445,15 @@ This allows widgets to follow both Django permissions and application-specific r
 Widgets can expose reusable actions:
 
 ```python
-class ViewStudentAction:
+class ViewStudent(Action):
     ...
 
 
-class EditStudentAction:
+class EditStudent(Action):
     ...
 
 
-class DeleteStudentAction:
+class DeleteStudent(Action):
     ...
 ```
 
@@ -463,9 +463,9 @@ Actions can be declared together:
 class StudentTableWidget(Widget):
 
     row_actions = Actions(
-        ViewStudentAction,
-        EditStudentAction,
-        DeleteStudentAction,
+        ViewStudent,
+        EditStudent,
+        DeleteStudent,
     )
 ```
 
