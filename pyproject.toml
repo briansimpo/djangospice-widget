@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "djangospice-widget"
-version = "0.2.0"
+version = "0.3.0"
 
 description = "Reusable, composable, request-aware UI widgets for Django."
 
@@ -53,18 +53,18 @@ classifiers = [
 
 dependencies = [
     "django>=5.0",
-    "djangospice_framework>=0.1"
+    "djangospice-framework>=0.2"
 ]
 
 
 [project.urls]
-Homepage = "https://github.com/briansimpo/djangospice_widget"
+Homepage = "https://github.com/briansimpo/djangospice-widget"
 
-Repository = "https://github.com/briansimpo/djangospice_widget"
+Repository = "https://github.com/briansimpo/djangospice-widget"
 
-Documentation = "https://github.com/briansimpo/djangospice_widget#readme"
+Documentation = "https://github.com/briansimpo/djangospice-widget#readme"
 
-Issues = "https://github.com/briansimpo/djangospice_widget/issues"
+Issues = "https://github.com/briansimpo/djangospice-widget/issues"
 
 
 [tool.hatch.build.targets.wheel]
