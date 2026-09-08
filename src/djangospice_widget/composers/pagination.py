@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from ..pagination import PaginationConfig
+from djangospice_widget.pagination import PaginationConfig
 
 
 class PaginationComposer:
