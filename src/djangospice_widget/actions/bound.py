@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from djangospice_framework.html.attributes import HTMXAttributes
 
@@ -51,3 +52,15 @@ class BoundAction:
     @property
     def htmx(self) -> HTMXAttributes:
         return self.action.htmx(self.context)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "label": self.label,
+            "icon": self.icon,
+            "description": self.description,
+            "css_class": self.css_class,
+            "confirm": self.confirm,
+            "enabled": self.enabled,
+            "htmx": self.htmx,
+        }
