@@ -26,8 +26,8 @@ Reusable, composable, request-aware UI widgets for Django.
 
 ## Requirements
 
-* Python 3.11+
-* Django 4.2+
+* Python 3.12+
+* Django 5.0+
 
 ## Installation
 
