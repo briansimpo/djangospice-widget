@@ -24,6 +24,11 @@ Reusable, composable, request-aware UI widgets for Django.
 * Object and multiple-object selection
 * Optional widget caching
 
+## Requirements
+
+* Python 3.11+
+* Django 4.2+
+
 ## Installation
 
 ```bash
@@ -612,17 +617,6 @@ class DashboardWidget(Widget):
 ```django
 {% render_widget "dashboard.dashboard" %}
 ```
-
-## Requirements
-
-* Python 3.11+
-* Django 4.2+
-
-## Status
-
-`djangospice-widget` is under active development.
-
-APIs may evolve before the first stable release.
 
 ## License
 
