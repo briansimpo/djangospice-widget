@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from django.utils.safestring import SafeString
+from django.utils.safestring import SafeString, mark_safe
 
 from .builder import WidgetBuilder
 from .cache import WidgetCache
@@ -70,3 +70,12 @@ class WidgetRenderer:
 
     def invalidate_cache(self) -> None:
         WidgetCache.delete(self.widget)
+
+
+
+def render(widget, *, asset_registry=None) -> SafeString:
+    try:
+        content = WidgetRenderer(widget, asset_registry=asset_registry).render()
+        return mark_safe(content)
+    except WidgetNotVisible:
+        return mark_safe("")

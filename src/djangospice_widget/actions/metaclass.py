@@ -1,9 +1,10 @@
 from __future__ import annotations
+from abc import ABCMeta
 
 from django.utils.text import camel_case_to_spaces, slugify
 
 
-class ActionMetaclass(type):
+class ActionMetaclass(ABCMeta):
     """
     Metaclass for Action.
 
@@ -15,7 +16,7 @@ class ActionMetaclass(type):
         cls = super().__new__(mcls, name, bases, attrs)
 
         # Skip the abstract base Action.
-        if not bases or name == "Action":
+        if name == "Action":
             return cls
 
         class_name = name

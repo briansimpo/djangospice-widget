@@ -22,7 +22,7 @@ authors = [
 keywords = [
     "django",
     "djangospice",
-    "django-widget",
+    "widget",
     "djangospice-widget"
 ]
 
@@ -52,8 +52,9 @@ classifiers = [
 
 
 dependencies = [
-    "django>=5.0",
-    "djangospice-framework>=0.2"
+    "django>=6.0",
+    "djangospice-framework>=0.3",
+    "djangospice-htmx>=0.1",
 ]
 
 

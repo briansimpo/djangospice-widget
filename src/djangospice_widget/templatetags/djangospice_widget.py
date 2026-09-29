@@ -7,7 +7,7 @@ from django.utils.safestring import SafeString, mark_safe
 
 from djangospice_widget.exceptions import WidgetNotVisible
 from djangospice_widget.registry import WidgetRegistry
-from djangospice_widget.utils import render
+from djangospice_widget.renderer import render
 from djangospice_widget.widget import Widget
 
 

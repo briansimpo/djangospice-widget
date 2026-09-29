@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
-from .widget import Widget
 from .interaction import Interaction
 
 
 @dataclass(frozen=True, slots=True)
 class Navigation:
 
-    widget: Widget
+    widget: Any
 
     def page(self, number: int) -> Interaction:
         return self.widget.interaction(
