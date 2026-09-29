@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import ClassVar
 
 from django.http import HttpRequest
-from djangospice_framework.response.response import Response
+from djangospice_htmx.response import Response
 
 from .dispatchers import ActionDispatcher, BaseDispatcher, MethodDispatcher
 from .exceptions import DispatcherNotFound
