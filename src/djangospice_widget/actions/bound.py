@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from djangospice_framework.html.attributes import HTMXAttributes
+from djangospice_htmx.attributes import HTMXAttributes
 
 from .action import Action
 from .context import ActionContext
