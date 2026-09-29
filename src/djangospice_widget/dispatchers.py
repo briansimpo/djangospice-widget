@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from django.http import HttpRequest
-from djangospice_framework.response.response import Response
+from djangospice_htmx.response import Response
 
 from .actions import ActionContext
 
