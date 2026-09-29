@@ -12,8 +12,8 @@ from django.http import HttpRequest
 from django.urls import reverse
 
 from djangospice_framework.core.payload import Payload
-from djangospice_framework.html.component import HTMLComponent
-from djangospice_framework.response.response import Response
+from djangospice_htmx.component import HTMLComponent
+from djangospice_htmx.response import Response
 
 from .utils import slugify
 from .actions import Action, Actions, ActionContext, BoundAction
