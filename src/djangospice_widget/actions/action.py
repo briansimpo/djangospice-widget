@@ -6,8 +6,8 @@ from typing import ClassVar
 from django.core.exceptions import PermissionDenied
 
 from djangospice_framework.core.object import Object
-from djangospice_framework.html.attributes import HTMXAttributes
-from djangospice_framework.response.response import Response
+from djangospice_htmx.attributes import HTMXAttributes
+from djangospice_htmx.response import Response
 
 from .context import ActionContext
 from .metaclass import ActionMetaclass
