@@ -4,7 +4,7 @@ from typing import Any
 
 from django.http import Http404, HttpRequest, HttpResponse
 from django.views import View
-from djangospice_framework.response.shortcuts import render_response
+from djangospice_htmx.shortcuts import render_response
 
 from .exceptions import WidgetNotVisible
 from .executor import WidgetExecutor
@@ -45,4 +45,4 @@ class WidgetView(View):
             raise Http404(
                 f"Widget '{app_name}:{name}' is not accessible."
             ) from None
-        return render_response(response, request)
+        return render_response(request, response)
