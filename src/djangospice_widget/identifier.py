@@ -7,31 +7,31 @@ from dataclasses import dataclass
 class WidgetIdentifier:
 
     app_name: str
-    name: str
+    widget_name: str
 
     def __post_init__(self) -> None:
         app_name = self.app_name.strip().casefold()
-        name = self.name.strip().casefold()
+        widget_name = self.widget_name.strip().casefold()
 
         if not app_name:
-            raise ValueError("Lookup app name cannot be empty.")
+            raise ValueError("Widget app_name cannot be empty.")
 
-        if not name:
-            raise ValueError("Lookup name cannot be empty.")
+        if not widget_name:
+            raise ValueError("Widget widget_name cannot be empty.")
 
         object.__setattr__(self, "app_name", app_name)
-        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "widget_name", widget_name)
 
     @property
     def key(self) -> tuple[str, str]:
-        return self.app_name, self.name
+        return self.app_name, self.widget_name
     
     def __str__(self) -> str:
-        return f"{self.app_name}.{self.name}"
+        return f"{self.app_name}.{self.widget_name}"
 
     @classmethod
     def from_model(cls, model) -> "WidgetIdentifier":
         return cls(
             app_name=model._meta.app_label,
-            name=model._meta.model_name,
+            widget_name=model._meta.model_name,
         )

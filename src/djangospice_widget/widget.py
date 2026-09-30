@@ -15,7 +15,7 @@ from djangospice_htmx.component import HTMLComponent
 from djangospice_htmx.response import Response
 
 from .actions import Action, Actions, ActionContext, BoundAction
-from .conf import APP_NAME_KEY, MODEL_NAME_KEY
+from .conf import APP_NAME_KEY, WIDGET_NAME_KEY
 from .exceptions import WidgetNotVisible
 from .identifier import WidgetIdentifier
 from .interaction import Interaction
@@ -345,7 +345,7 @@ class Widget(HTMLComponent):
             self.namespace,
             kwargs={
                 APP_NAME_KEY: self.app_label,
-                MODEL_NAME_KEY: self.name,
+                WIDGET_NAME_KEY: self.name,
             },
         )
         params = {k: v for k, v in self.kwargs.items() if k != "id"}
@@ -362,7 +362,7 @@ class Widget(HTMLComponent):
             match
             and match.view_name == self.namespace
             and match.kwargs.get(APP_NAME_KEY) == self.app_label
-            and match.kwargs.get(MODEL_NAME_KEY) == self.name
+            and match.kwargs.get(WIDGET_NAME_KEY) == self.name
         )
 
     def url(self, *, state: QueryState | None = None, **params: Any) -> str:

@@ -20,11 +20,11 @@ class WidgetView(View):
     to the WidgetExecutor.
     """
 
-    def dispatch(self, request: HttpRequest, app_name: str, name: str, *args: Any, **kwargs: Any) -> HttpResponse:
+    def dispatch(self, request: HttpRequest, app_name: str, widget_name: str, *args: Any, **kwargs: Any) -> HttpResponse:
         try:
             widget_cls = WidgetResolver.resolve(
                 app_name,
-                name,
+                widget_name,
             )
         except LookupError as exc:
             raise Http404(str(exc)) from exc
@@ -43,6 +43,6 @@ class WidgetView(View):
             response = WidgetExecutor(widget, request).execute()
         except WidgetNotVisible:
             raise Http404(
-                f"Widget '{app_name}:{name}' is not accessible."
+                f"Widget '{app_name}:{widget_name}' is not accessible."
             ) from None
         return render_response(request, response)

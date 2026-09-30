@@ -18,21 +18,21 @@ class WidgetResolver:
     """
 
     @classmethod
-    def key(cls, app_name: str, name: str) -> str:
+    def key(cls, app_name: str, widget_name: str) -> str:
         """
         Build the canonical registry key for a widget.
         """
-        return str(WidgetIdentifier(app_name, name))
+        return str(WidgetIdentifier(app_name, widget_name))
 
     @classmethod
-    def resolve(cls, app_name: str, name: str, *, expected_type: type[WidgetT] | None = None) -> type[WidgetT]:
+    def resolve(cls, app_name: str, widget_name: str, *, expected_type: type[WidgetT] | None = None) -> type[WidgetT]:
         """
         Resolve a registered widget class.
 
         ``expected_type`` can be supplied when a consumer requires a
         particular widget specialization, for example ``DynamicTable``.
         """
-        widget_key = cls.key(app_name, name)
+        widget_key = cls.key(app_name, widget_name)
 
         try:
             widget_cls = WidgetRegistry.get(widget_key)
