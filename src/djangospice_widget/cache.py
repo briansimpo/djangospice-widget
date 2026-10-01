@@ -101,7 +101,7 @@ class WidgetCache:
     def exists(cls, widget: Widget) -> bool:
         """
         Check if a valid cached response exists for the widget.
-        Uses `has_key` to avoid pulling large HTML payloads into memory.
+        Uses `has_key` to avoid pulling large HTML data into memory.
 
         Args:
             widget: The widget instance to check.

@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING, Any
 
 from django.http import HttpRequest
 
-from djangospice_framework.core.payload import Payload
-
 if TYPE_CHECKING:
     from djangospice_widget.widget import Widget
 
@@ -25,7 +23,7 @@ class ActionContext:
 
     objects: tuple[Any, ...] = ()
 
-    data: Payload = field(default_factory=Payload)
+    data: dict[str, Any] = field(default_factory=dict)
 
     @property
     def user(self):

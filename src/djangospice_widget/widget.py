@@ -11,7 +11,6 @@ from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.text import camel_case_to_spaces
 
-from djangospice_framework.core.payload import Payload
 from djangospice_htmx.component import HTMLComponent
 from djangospice_htmx.response import Response
 
@@ -81,8 +80,6 @@ class Widget(HTMLComponent):
 
     cache_timeout: ClassVar[int | None] = None
 
-    # ``None`` allows a Widget to use ``get_content()`` instead of a
-    # template. This matches the HTMLComponent rendering contract.
     template_name: ClassVar[str | None] = None
 
     # ------------------------------------------------------------------
@@ -498,13 +495,8 @@ class Widget(HTMLComponent):
             self.get_queryset().filter(pk__in=ids),
         )
 
-    def get_data(self) -> Payload:
-        data = self.request_data
-
-        if data is None:
-            return Payload()
-
-        return Payload.from_dict(data.dict())
+    def get_data(self) -> dict:
+        return self.request_data
 
     # ------------------------------------------------------------------
     # Navigation & HTMX
