@@ -2,32 +2,38 @@
 
 Reusable, composable, request-aware UI widgets for Django.
 
-`djangospice-widget` provides a declarative widget system for building server-rendered Django interfaces from small, reusable UI units. Widgets can render templates or direct content, accept request data, expose actions, compose other widgets, define named slots, integrate with HTMX, and support lazy loading, refreshing, permissions, and caching.
+`djangospice-widget` provides a class-based widget system for building server-rendered Django interfaces from small, reusable UI units.
+
+Widgets can render templates or direct HTML content, access request data, expose actions, compose other widgets, define named slots, integrate with HTMX, support permissions, and work with Django models and querysets.
 
 ## Features
 
-* Class-based and function-based widgets
-* Automatic widget registration
-* Template-based or direct HTML content
-* Request-aware widgets
-* Query parameters and request data
-* Widget composition
-* Child widgets
-* Named slots
-* Widget actions
-* Permission-aware rendering
-* Lazy loading
-* HTMX integration
-* Automatic refresh
-* Widget endpoints
-* Model and queryset support
-* Object and multiple-object selection
-* Optional widget caching
+- Class-based widgets
+- Automatic widget registration
+- Template-based rendering
+- Direct HTML content rendering
+- Request-aware widgets
+- Request data and query parameters
+- Widget composition
+- Child widgets
+- Named slots
+- Widget actions
+- Permission-aware visibility
+- Custom visibility rules
+- Lazy loading
+- HTMX integration
+- Automatic refresh
+- Widget endpoints
+- Stateful widget URLs
+- Model and queryset support
+- Object and multiple-object selection
+- Optional widget caching
+- HTTP method handling
 
 ## Requirements
 
-* Python 3.12+
-* Django 5.0+
+- Python 3.12+
+- Django 5.0+
 
 ## Installation
 
@@ -44,53 +50,73 @@ INSTALLED_APPS = [
 ]
 ```
 
+---
+
 ## Defining Widgets
 
-### Class-Based Widgets
-
-A widget is a reusable UI unit.
+A widget is a reusable, class-based UI component.
 
 ```python
 from djangospice_widget import Widget
 
 
 class StudentStatisticsWidget(Widget):
-    name = "student_statistics"
-    title = "Student Statistics"
     template_name = "students/widgets/statistics.html"
 
     def get_context(self):
         context = super().get_context()
         context["students"] = self.get_queryset()
+        context["total"] = self.get_queryset().count()
         return context
 ```
 
-Widgets have a stable key based on their application and name:
-
-```text
-students.student_statistics
-```
-
-### Function-Based Widgets
-
-For simple widgets, a function can be used instead of defining a class.
+Instantiate a widget with the current request:
 
 ```python
-from djangospice_widget import widget
-
-
-@widget(
-    name="welcome",
-    title="Welcome",
-    template="dashboard/widgets/welcome.html",
-)
-def welcome_widget(widget):
-    return {
-        "message": "Welcome to ScholarMIS",
-    }
+widget = StudentStatisticsWidget(request=request)
 ```
 
-Function-based widgets are useful when a dedicated widget class is unnecessary.
+---
+
+## Widget Identity
+
+Widgets have a stable identity based on their application and name.
+
+```python
+class StudentStatisticsWidget(Widget):
+    ...
+```
+
+The widget automatically derives a name and title:
+
+```text
+name  -> student-statistics
+title -> Student Statistics
+```
+
+You can explicitly define them:
+
+```python
+class StudentStatisticsWidget(Widget):
+    name = "student-statistics"
+    title = "Student Statistics"
+```
+
+The widget key is available through:
+
+```python
+widget.widget_key
+```
+
+For example:
+
+```text
+students.student-statistics
+```
+
+Widget keys can be used to reference registered widgets.
+
+---
 
 ## Widget Configuration
 
@@ -98,10 +124,9 @@ Widgets can define metadata and behavior through class attributes.
 
 ```python
 class StudentStatisticsWidget(Widget):
-    name = "student_statistics"
+    name = "student-statistics"
     title = "Student Statistics"
     description = "Summary of current student records."
-    group = "students"
 
     template_name = "students/widgets/statistics.html"
 
@@ -113,33 +138,23 @@ class StudentStatisticsWidget(Widget):
 
 Common configuration options include:
 
-| Option             | Purpose                        |
-| ------------------ | ------------------------------ |
-| `name`             | Widget name                    |
-| `title`            | Human-readable title           |
-| `description`      | Widget description             |
-| `group`            | Logical grouping               |
-| `template_name`    | Widget template                |
-| `permission`       | Required Django permission     |
-| `enabled`          | Enables or disables the widget |
-| `priority`         | Ordering priority              |
-| `lazy`             | Enables lazy loading           |
-| `refreshable`      | Enables automatic refresh      |
-| `refresh_interval` | Refresh interval               |
-| `cache_timeout`    | Enables widget caching         |
-| `model`            | Associated Django model        |
+| Option | Purpose |
+| --- | --- |
+| `name` | Widget name |
+| `title` | Human-readable title |
+| `app_label` | Django application label |
+| `description` | Widget description |
+| `template_name` | Widget template |
+| `permission` | Required Django permission |
+| `enabled` | Enables or disables the widget |
+| `priority` | Ordering priority |
+| `lazy` | Enables lazy loading |
+| `refreshable` | Enables automatic refresh |
+| `refresh_interval` | Refresh interval in seconds |
+| `cache_timeout` | Enables widget caching |
+| `model` | Associated Django model |
 
-## Widget Identity
-
-Every widget has a stable widget key:
-
-For example:
-
-```text
-students.student_statistics
-```
-
-Widget keys provide a consistent way to reference registered widgets.
+---
 
 ## Rendering Widgets
 
@@ -149,41 +164,65 @@ Load the widget template tags:
 {% load djangospice_widget %}
 ```
 
-A registered widget can be rendered by its key:
+A registered widget can be rendered using its widget key:
 
 ```django
-{% render_widget "students.student_statistics" %}
+{% render_widget "students.student-statistics" %}
 ```
 
 Parameters can be passed to the widget:
 
 ```django
-{% render_widget "students.student_statistics" campus=campus %}
+{% render_widget "students.student-statistics" campus=campus %}
 ```
 
 The current Django request is automatically available to the widget.
 
 ### Rendering from Python
 
-Widgets can also be rendered directly from Python:
+Widgets can also be rendered directly:
 
 ```python
-from djangospice_widget import WidgetRenderer
+widget = StudentStatisticsWidget(
+    request=request,
+)
 
-widget = StudentStatisticsWidget(request=request)
-
-html = WidgetRenderer(widget).render()
+html = widget.render()
 ```
+
+For an HTTP response:
+
+```python
+response = widget.response()
+```
+
+For example:
+
+```python
+def student_dashboard(request):
+    widget = StudentStatisticsWidget(
+        request=request,
+    )
+
+    return widget.response()
+```
+
+---
 
 ## Widget Content and Templates
 
-Widgets can provide direct content:
+Widgets can provide direct HTML content:
 
 ```python
+from django.utils.html import format_html
+
+
 class MessageWidget(Widget):
 
     def get_content(self):
-        return "<strong>Hello</strong>"
+        return format_html(
+            "<strong>Hello</strong>"
+        )
 ```
 
 Or render a template using context:
@@ -198,7 +237,9 @@ class MessageWidget(Widget):
         return context
 ```
 
-Templates are recommended for reusable UI.
+Template-based widgets can use the standard Django template system.
+
+---
 
 ## Widget Composition
 
@@ -221,17 +262,19 @@ class DashboardWidget(Widget):
 
     def configure(self):
         self.add_children(
-            StudentStatisticsWidget(request=self.request),
-            AttendanceSummaryWidget(request=self.request),
-            RecentRegistrationsWidget(request=self.request),
+            StudentStatisticsWidget(
+                request=self.request,
+            ),
+            AttendanceSummaryWidget(
+                request=self.request,
+            ),
+            RecentRegistrationsWidget(
+                request=self.request,
+            ),
         )
 ```
 
-The children form part of the parent's widget composition.
-
-### Rendering Children
-
-A widget's children can be rendered from its template:
+Children can be rendered from the template:
 
 ```django
 {% render_children widget %}
@@ -245,7 +288,7 @@ For example:
 </div>
 ```
 
-`render_children` operates on the current widget instance.
+---
 
 ## Named Slots
 
@@ -259,12 +302,18 @@ class DashboardWidget(Widget):
     def configure(self):
         self.add_to_slot(
             "toolbar",
-            RefreshButtonWidget(request=self.request),
+            RefreshButtonWidget(
+                request=self.request,
+            ),
         )
 
         self.add_children(
-            StudentStatisticsWidget(request=self.request),
-            AttendanceSummaryWidget(request=self.request),
+            StudentStatisticsWidget(
+                request=self.request,
+            ),
+            AttendanceSummaryWidget(
+                request=self.request,
+            ),
         )
 ```
 
@@ -284,11 +333,9 @@ The template can render the slot:
 </div>
 ```
 
-Slots are useful for creating reusable container widgets with extension points.
+Slots are useful for reusable container widgets with named extension areas.
 
 ### Children and Slots
-
-Children and slots serve different purposes.
 
 **Children** represent the normal contents of a widget:
 
@@ -302,7 +349,7 @@ Children and slots serve different purposes.
 {% render_slot widget "toolbar" %}
 ```
 
-A widget can therefore define a reusable structure while allowing other widgets to populate specific areas.
+---
 
 ## Template Tags
 
@@ -313,7 +360,7 @@ The package provides three primary rendering tags.
 Renders a registered widget using its widget key:
 
 ```django
-{% render_widget "students.statistics" %}
+{% render_widget "students.student-statistics" %}
 ```
 
 ### `render_children`
@@ -332,15 +379,13 @@ Renders widgets assigned to a named slot:
 {% render_slot widget "toolbar" %}
 ```
 
-The inputs are intentionally different:
+| Tag | Input | Purpose |
+| --- | --- | --- |
+| `render_widget` | Widget key | Render a registered widget |
+| `render_children` | Widget instance | Render widget children |
+| `render_slot` | Widget instance + slot | Render widgets in a named slot |
 
-| Tag               | Input                  | Purpose                        |
-| ----------------- | ---------------------- | ------------------------------ |
-| `render_widget`   | Widget key             | Render a registered widget     |
-| `render_children` | Widget instance        | Render the widget's children   |
-| `render_slot`     | Widget instance + slot | Render widgets in a named slot |
-
-Widget keys are used to reference registered widgets, while widget instances are used to compose existing widget trees.
+---
 
 ## Request Awareness
 
@@ -355,7 +400,7 @@ class CurrentUserWidget(Widget):
         return context
 ```
 
-Widgets can access request-related information through:
+Widgets can access:
 
 ```python
 widget.request
@@ -365,9 +410,23 @@ widget.request_data
 
 GET requests expose query parameters, while modifying requests expose submitted request data.
 
+Individual values can be accessed with:
+
+```python
+widget.request_value("status")
+```
+
+Multiple values can be accessed with:
+
+```python
+widget.request_values("selected_ids")
+```
+
+---
+
 ## Query State and URLs
 
-Widgets can work with the current query state:
+Widgets can access the current query state:
 
 ```python
 widget.query_state
@@ -379,14 +438,25 @@ Widget URLs can preserve or modify query parameters:
 widget.url(page=2)
 ```
 
+Multiple parameters can be supplied:
+
+```python
+widget.url(
+    page=2,
+    status="active",
+)
+```
+
 This is useful for:
 
-* filtering;
-* pagination;
-* sorting;
-* tabs;
-* search;
-* other stateful interfaces.
+- filtering
+- pagination
+- sorting
+- tabs
+- searching
+- stateful interfaces
+
+---
 
 ## Widget Endpoints
 
@@ -396,7 +466,14 @@ Registered widgets have a canonical endpoint:
 widget.endpoint
 ```
 
-Widget endpoints can be used for HTMX requests and other widget interactions.
+Widget endpoints can be used for:
+
+- HTMX requests
+- lazy loading
+- automatic refresh
+- widget interactions
+
+---
 
 ## HTMX
 
@@ -411,7 +488,7 @@ class StatisticsWidget(Widget):
     lazy = True
 ```
 
-The widget can initially display a placeholder and load its content from its endpoint.
+Lazy widgets can load their content from their widget endpoint.
 
 ### Automatic Refresh
 
@@ -423,7 +500,33 @@ class StatisticsWidget(Widget):
     refresh_interval = 30
 ```
 
-This is useful for dashboards, counters, status information, and other dynamic UI.
+This is useful for:
+
+- dashboards
+- counters
+- status information
+- dynamic statistics
+
+### HTMX Interactions
+
+Widgets can create interactions:
+
+```python
+interaction = widget.interaction(
+    "/students/",
+    method="GET",
+    target="#student-list",
+)
+```
+
+Options include:
+
+- HTTP method
+- target
+- swap strategy
+- URL behavior
+
+---
 
 ## Permissions and Visibility
 
@@ -434,7 +537,19 @@ class StudentStatisticsWidget(Widget):
     permission = "students.view_student"
 ```
 
-Widgets can also implement application-specific visibility rules:
+Check whether a widget is visible:
+
+```python
+widget.visible()
+```
+
+Explicitly enforce visibility:
+
+```python
+widget.authorize()
+```
+
+Application-specific visibility rules can also be defined:
 
 ```python
 class StudentStatisticsWidget(Widget):
@@ -443,11 +558,11 @@ class StudentStatisticsWidget(Widget):
         return self.user.is_staff
 ```
 
-This allows widgets to follow both Django permissions and application-specific rules.
+---
 
 ## Widget Actions
 
-Widgets can expose reusable actions:
+Widgets can expose reusable actions.
 
 ```python
 class ViewStudent(Action):
@@ -474,9 +589,15 @@ class StudentTableWidget(Widget):
     )
 ```
 
-Multiple action collections can be declared and composed, including nested collections.
+Multiple action collections can be declared and composed.
 
-Actions can be invoked through the widget's interaction endpoint.
+Access the widget's actions with:
+
+```python
+widget.get_action_collection()
+```
+
+---
 
 ## HTTP Methods
 
@@ -486,9 +607,15 @@ Widgets can respond to HTTP methods:
 class StudentWidget(Widget):
 
     def get(self):
-        ...
+        return self.response()
 
     def post(self):
+        ...
+
+    def put(self):
+        ...
+
+    def patch(self):
         ...
 
     def delete(self):
@@ -497,7 +624,9 @@ class StudentWidget(Widget):
 
 GET is the default rendering operation.
 
-Other methods can be implemented for interactive widgets and operations.
+Other methods can be implemented for interactive widgets and server-side operations.
+
+---
 
 ## Models and Querysets
 
@@ -508,7 +637,7 @@ class StudentListWidget(Widget):
     model = Student
 ```
 
-The widget can access its queryset through:
+Access the queryset through:
 
 ```python
 widget.get_queryset()
@@ -528,10 +657,19 @@ class StudentListWidget(Widget):
         )
 ```
 
-Widgets can also resolve selected objects:
+---
+
+## Object Selection
+
+Widgets can resolve a selected object:
 
 ```python
 widget.get_object()
+```
+
+Multiple selected objects can be resolved with:
+
+```python
 widget.get_objects()
 ```
 
@@ -542,33 +680,44 @@ selected_id
 selected_ids
 ```
 
+These can be customized:
+
+```python
+class StudentWidget(Widget):
+    object_parameter = "student_id"
+    objects_parameter = "student_ids"
+```
+
+---
+
 ## Caching
 
-Widgets can optionally cache rendered output:
+Widgets can optionally enable caching:
 
 ```python
 class StatisticsWidget(Widget):
     cache_timeout = 300
 ```
 
-Caching can be useful for widgets that perform expensive operations, such as:
+Caching can be useful for:
 
-* dashboards;
-* statistics;
-* reports;
-* summaries;
-* expensive database queries.
+- dashboards
+- statistics
+- reports
+- summaries
+- expensive database queries
 
-## Complete Example
+---
 
-### Widget
+# Complete Example
+
+## Widget
 
 ```python
 from djangospice_widget import Widget
 
 
 class DashboardWidget(Widget):
-    name = "dashboard"
     title = "Dashboard"
     template_name = "dashboard/dashboard.html"
 
@@ -590,7 +739,7 @@ class DashboardWidget(Widget):
         )
 ```
 
-### Template
+## Template
 
 ```django
 {% load djangospice_widget %}
@@ -612,11 +761,24 @@ class DashboardWidget(Widget):
 </div>
 ```
 
-### Usage
+## Usage in a Template
 
 ```django
 {% render_widget "dashboard.dashboard" %}
 ```
+
+## Usage from Python
+
+```python
+def dashboard(request):
+    widget = DashboardWidget(
+        request=request,
+    )
+
+    return widget.response()
+```
+
+---
 
 ## License
 

@@ -9,6 +9,7 @@ from django.core.exceptions import AppRegistryNotReady
 from django.db.models import Model, QuerySet
 from django.http import HttpRequest
 from django.urls import reverse
+from django.utils.text import camel_case_to_spaces
 
 from djangospice_framework.core.payload import Payload
 from djangospice_htmx.component import HTMLComponent
@@ -24,16 +25,37 @@ from .querystate import QueryState
 from .utils import slugify
 
 
+_WIDGET_SUFFIX = "Widget"
+
+
 class Widget(HTMLComponent):
     """
     Base class for Djangospice UI widgets.
 
-    Coordinates presentation, state, composition, security, and execution.
+    A Widget coordinates:
+
+    - identity and registration metadata
+    - presentation and rendering
+    - request state
+    - permissions and visibility
+    - actions
+    - child widgets and slots
+    - model/queryset resolution
+    - navigation and HTMX interactions
+    - caching
+    - HTTP response generation
+
+    Rendering itself is delegated to ``HTMLComponent``. A widget may
+    therefore render either:
+
+    1. through ``template_name`` + ``get_context()``, or
+    2. through ``get_content()`` for direct HTML content.
     """
 
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # Class Attributes & Configuration
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
+
     name: ClassVar[str | None] = None
     title: ClassVar[str | None] = None
     app_label: ClassVar[str | None] = None
@@ -51,20 +73,21 @@ class Widget(HTMLComponent):
     objects_parameter: ClassVar[str] = "selected_ids"
 
     namespace: ClassVar[str] = "djangospice_widget"
+
     lazy: ClassVar[bool] = False
+
     refreshable: ClassVar[bool] = False
     refresh_interval: ClassVar[int | None] = None
 
     cache_timeout: ClassVar[int | None] = None
-    template_name: ClassVar[str] = ""
 
-    # --------------------------------------------------------------------------
-    # Subclass Hook & Initialization
-    # --------------------------------------------------------------------------
-    def __init_subclass__(cls, **kwargs: Any) -> None:
-        super().__init_subclass__(**kwargs)
-        cls._configure_identity()
-        cls._normalize_actions()
+    # ``None`` allows a Widget to use ``get_content()`` instead of a
+    # template. This matches the HTMLComponent rendering contract.
+    template_name: ClassVar[str | None] = None
+
+    # ------------------------------------------------------------------
+    # Initialization
+    # ------------------------------------------------------------------
 
     def __init__(
         self,
@@ -79,6 +102,7 @@ class Widget(HTMLComponent):
 
         self.request = request
         self.parent = parent
+
         self.children: list[Widget] = []
         self.slots: dict[str, list[Widget]] = {}
 
@@ -93,53 +117,151 @@ class Widget(HTMLComponent):
                 self.set_slot(name, *widgets)
 
     def initialize(self) -> None:
-        """Post-construction initialization hook."""
+        """
+        Post-construction initialization hook.
+        """
         pass
 
     def configure(self) -> None:
-        """Instance-level composition and slot population hook."""
+        """
+        Instance-level composition and slot population hook.
+        """
         pass
 
-    # --------------------------------------------------------------------------
-    # Identity
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # Subclass Configuration
+    # ------------------------------------------------------------------
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+
+        cls._configure_identity()
+        cls._normalize_actions()
+
     @classmethod
     def _configure_identity(cls) -> None:
+        """
+        Configure the widget's identity.
+
+        ``Widget`` is an implementation suffix and is not included in
+        the public widget name or title.
+        """
         if cls.name is None:
-            cls.name = slugify(cls.__name__)
+            cls.name = cls._resolve_name()
 
         if cls.title is None:
-            cls.title = cls.name.replace("_", " ").title()
+            cls.title = cls._resolve_title()
 
         if cls.app_label is None:
             cls.app_label = cls._resolve_app_label(cls.__module__)
 
     @classmethod
+    def _identity_class_name(cls) -> str:
+        """
+        Return the class name without the Widget suffix.
+
+        Examples:
+
+            DashboardWidget -> Dashboard
+            Dashboardwidget -> Dashboard
+            DashboardWIDGET -> Dashboard
+            UserStatsWidget -> UserStats
+            Dashboard       -> Dashboard
+        """
+        class_name = str(cls.__name__)
+
+        if class_name.lower().endswith(_WIDGET_SUFFIX.lower()):
+            return class_name[: -len(_WIDGET_SUFFIX)]
+
+        return class_name
+
+    @classmethod
+    def _resolve_name(cls) -> str:
+        """
+        Resolve the canonical widget identifier.
+
+        Examples:
+
+            UserStatsWidget -> user-stats
+            StudentAttendanceWidget -> student-attendance
+            DashboardWidget -> dashboard
+        """
+        return slugify(
+            camel_case_to_spaces(
+                cls._identity_class_name(),
+            ),
+        )
+
+    @classmethod
+    def _resolve_title(cls) -> str:
+        """
+        Resolve the human-readable widget title.
+
+        Examples:
+
+            UserStatsWidget -> User Stats
+            StudentAttendanceWidget -> Student Attendance
+            DashboardWidget -> Dashboard
+        """
+        return camel_case_to_spaces(
+            cls._identity_class_name(),
+        ).title()
+
+    @classmethod
     def _resolve_app_label(cls, module_path: str) -> str:
+        """
+        Resolve the Django application label from the widget module path.
+
+        The longest matching application path is preferred.
+        """
         try:
-            for app_config in apps.get_app_configs():
-                if module_path.startswith(app_config.name):
-                    return app_config.label
+            matches = [
+                app_config
+                for app_config in apps.get_app_configs()
+                if (
+                    module_path == app_config.name
+                    or module_path.startswith(
+                        f"{app_config.name}.",
+                    )
+                )
+            ]
+
+            if matches:
+                return max(
+                    matches,
+                    key=lambda app_config: len(app_config.name),
+                ).label
+
         except AppRegistryNotReady:
             pass
 
-        parts = module_path.split(".")
-        return parts[0] if parts else ""
+        return module_path.split(".", 1)[0]
 
     @property
     def widget_key(self) -> str:
-        return str(WidgetIdentifier(self.app_label, self.name))
+        """
+        Return the canonical widget key.
+        """
+        return str(
+            WidgetIdentifier(
+                self.app_label,
+                self.name,
+            )
+        )
 
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # Actions
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
+
     @classmethod
     def _declared_action_groups(cls) -> dict[str, Actions]:
         groups: dict[str, Actions] = {}
+
         for base in reversed(cls.__mro__):
             for name, value in base.__dict__.items():
                 if isinstance(value, Actions):
                     groups[name] = value
+
         return groups
 
     @classmethod
@@ -148,7 +270,10 @@ class Widget(HTMLComponent):
         normalized: dict[str, Actions] = {}
 
         for name, actions in groups.items():
-            if name in cls.__dict__ and isinstance(cls.__dict__[name], Actions):
+            if (
+                name in cls.__dict__
+                and isinstance(cls.__dict__[name], Actions)
+            ):
                 collection = Actions(*deepcopy(actions))
                 setattr(cls, name, collection)
                 normalized[name] = collection
@@ -160,23 +285,30 @@ class Widget(HTMLComponent):
     @classmethod
     def merge_actions(cls, *collections: Actions) -> Actions:
         actions: dict[str, Any] = {}
+
         for collection in collections:
             for action in collection:
                 actions[action.name] = deepcopy(action)
+
         return Actions(*actions.values())
 
     def get_action_collection(self) -> Actions:
         return self._actions
 
-    def bind_action(self, action: Action, context: ActionContext) -> BoundAction:
+    def bind_action(
+        self,
+        action: Action,
+        context: ActionContext,
+    ) -> BoundAction:
         return BoundAction(
             action=action,
             context=context,
         )
 
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # Composition & Tree Hierarchy
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
+
     def add_child(self, widget: Widget) -> Widget:
         self._attach(widget)
         self.children.append(widget)
@@ -185,12 +317,15 @@ class Widget(HTMLComponent):
     def add_children(self, *widgets: Widget) -> tuple[Widget, ...]:
         for widget in widgets:
             self.add_child(widget)
+
         return widgets
 
     def remove_child(self, widget: Widget) -> None:
         if widget not in self.children:
             return
+
         self.children.remove(widget)
+
         if widget.parent is self:
             widget.parent = None
 
@@ -198,6 +333,7 @@ class Widget(HTMLComponent):
         for widget in self.children:
             if widget.parent is self:
                 widget.parent = None
+
         self.children.clear()
 
     def get_children(self) -> tuple[Widget, ...]:
@@ -205,19 +341,26 @@ class Widget(HTMLComponent):
 
     def set_slot(self, name: str, *widgets: Widget) -> None:
         self.clear_slot(name)
+
         for widget in widgets:
             self.add_to_slot(name, widget)
 
     def add_to_slot(self, name: str, widget: Widget) -> Widget:
         self._attach(widget)
+
         self.slots.setdefault(name, []).append(widget)
+
         return widget
 
-    def add_to_slots(self, **slots: Widget | list[Widget] | tuple[Widget, ...]) -> None:
+    def add_to_slots(
+        self,
+        **slots: Widget | list[Widget] | tuple[Widget, ...],
+    ) -> None:
         for name, value in slots.items():
             if isinstance(value, Widget):
                 self.add_to_slot(name, value)
                 continue
+
             for widget in value:
                 self.add_to_slot(name, widget)
 
@@ -227,11 +370,18 @@ class Widget(HTMLComponent):
     def has_slot(self, name: str) -> bool:
         return bool(self.slots.get(name))
 
-    def remove_from_slot(self, name: str, widget: Widget) -> None:
+    def remove_from_slot(
+        self,
+        name: str,
+        widget: Widget,
+    ) -> None:
         widgets = self.slots.get(name)
+
         if not widgets or widget not in widgets:
             return
+
         widgets.remove(widget)
+
         if widget.parent is self:
             widget.parent = None
 
@@ -239,6 +389,7 @@ class Widget(HTMLComponent):
         for widget in self.slots.get(name, ()):
             if widget.parent is self:
                 widget.parent = None
+
         self.slots.pop(name, None)
 
     def clear_slots(self) -> None:
@@ -247,14 +398,19 @@ class Widget(HTMLComponent):
 
     def _attach(self, widget: Widget) -> None:
         if widget is self:
-            raise ValueError("A widget cannot contain itself.")
-        widget.parent = self
-        if widget.request is None:
-            widget.request = getattr(self, "request", None)
+            raise ValueError(
+                "A widget cannot contain itself.",
+            )
 
-    # --------------------------------------------------------------------------
+        widget.parent = self
+
+        if widget.request is None:
+            widget.request = self.request
+
+    # ------------------------------------------------------------------
     # Request & Visibility
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
+
     @property
     def user(self) -> Any:
         return getattr(self.request, "user", None)
@@ -263,17 +419,27 @@ class Widget(HTMLComponent):
     def request_data(self) -> Any:
         if self.request is None:
             return None
+
         if self.request.method in {"POST", "PUT", "PATCH"}:
             return self.request.POST
+
         return self.request.GET
 
     def request_value(self, name: str) -> Any:
         data = self.request_data
-        return data.get(name) if data is not None else None
+
+        if data is None:
+            return None
+
+        return data.get(name)
 
     def request_values(self, name: str) -> list[Any]:
         data = self.request_data
-        return data.getlist(name) if data is not None else []
+
+        if data is None:
+            return []
+
+        return data.getlist(name)
 
     def authorize(self) -> None:
         if not self.visible():
@@ -282,49 +448,68 @@ class Widget(HTMLComponent):
     def visible(self) -> bool:
         if not self.enabled:
             return False
+
         if self.permission and not self._has_permission():
             return False
+
         return self.is_visible()
 
     def _has_permission(self) -> bool:
         user = self.user
-        return bool(user and user.is_authenticated and user.has_perm(self.permission))
+
+        return bool(
+            user
+            and user.is_authenticated
+            and user.has_perm(self.permission),
+        )
 
     def is_visible(self) -> bool:
         return True
 
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # Data Resolution
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
+
     def get_queryset(self) -> QuerySet[Model]:
         if self.model is None:
             raise NotImplementedError(
-                f"{self.__class__.__name__} must define 'model' or override 'get_queryset()'."
+                f"{self.__class__.__name__} must define "
+                "'model' or override 'get_queryset()'.",
             )
+
         return self.model._default_manager.all()
 
     def get_object(self) -> Model | None:
         pk = self.request_value(self.object_parameter)
+
         if not pk:
             return None
+
         return self.get_queryset().filter(pk=pk).first()
 
     def get_objects(self) -> tuple[Model, ...]:
         ids = self.request_values(self.objects_parameter)
+
         if not ids:
             obj = self.get_object()
             return (obj,) if obj else ()
-        return tuple(self.get_queryset().filter(pk__in=ids))
+
+        return tuple(
+            self.get_queryset().filter(pk__in=ids),
+        )
 
     def get_data(self) -> Payload:
         data = self.request_data
+
         if data is None:
             return Payload()
+
         return Payload.from_dict(data.dict())
 
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
     # Navigation & HTMX
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
+
     @property
     def navigation(self) -> Navigation:
         return Navigation(self)
@@ -333,7 +518,10 @@ class Widget(HTMLComponent):
     def query_state(self) -> QueryState:
         if self.request is None:
             return QueryState()
-        return QueryState.from_querydict(self.request.GET)
+
+        return QueryState.from_querydict(
+            self.request.GET,
+        )
 
     @property
     def base_url(self) -> str:
@@ -348,16 +536,30 @@ class Widget(HTMLComponent):
                 WIDGET_NAME_KEY: self.name,
             },
         )
-        params = {k: v for k, v in self.kwargs.items() if k != "id"}
-        return f"{url}?{urlencode(params)}" if params else url
+
+        params = {
+            key: value
+            for key, value in self.kwargs.items()
+            if key != "id"
+        }
+
+        if params:
+            return f"{url}?{urlencode(params)}"
+
+        return url
 
     @property
     def is_lazy_fetch(self) -> bool:
         request = self.request
-        if request is None or request.headers.get("HX-Request") != "true":
+
+        if (
+            request is None
+            or request.headers.get("HX-Request") != "true"
+        ):
             return False
 
         match = request.resolver_match
+
         return bool(
             match
             and match.view_name == self.namespace
@@ -365,14 +567,31 @@ class Widget(HTMLComponent):
             and match.kwargs.get(WIDGET_NAME_KEY) == self.name
         )
 
-    def url(self, *, state: QueryState | None = None, **params: Any) -> str:
+    def url(
+        self,
+        *,
+        state: QueryState | None = None,
+        **params: Any,
+    ) -> str:
         state = state or self.query_state
+
         for name, value in params.items():
             state = state.set(name, value)
+
         query = state.encode()
-        return f"{self.base_url}?{query}" if query else self.base_url
+
+        if query:
+            return f"{self.base_url}?{query}"
+
+        return self.base_url
 
     def configure_htmx(self) -> None:
+        """
+        Configure HTMX behaviour for the widget.
+
+        This method is called immediately before rendering so that
+        request-dependent HTMX attributes are always current.
+        """
         if self.lazy:
             (
                 self.htmx
@@ -384,9 +603,12 @@ class Widget(HTMLComponent):
 
         if self.refreshable and self.refresh_interval:
             trigger = getattr(self.htmx, "trigger", None) or "load"
+
             (
                 self.htmx
-                .trigger_on(f"{trigger}, every {self.refresh_interval}s")
+                .trigger_on(
+                    f"{trigger}, every {self.refresh_interval}s",
+                )
                 .target_to("this")
             )
 
@@ -401,17 +623,26 @@ class Widget(HTMLComponent):
     ) -> Interaction:
         htmx = (
             self.htmx
-            .request(method=method, url=url)
+            .request(
+                method=method,
+                url=url,
+            )
             .target_to(target or "this")
             .swap_to(swap)
         )
+
         if push_url:
             htmx = htmx.push_url(url)
-        return Interaction(url=url, htmx=htmx)
 
-    # --------------------------------------------------------------------------
+        return Interaction(
+            url=url,
+            htmx=htmx,
+        )
+
+    # ------------------------------------------------------------------
     # Caching
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
+
     def should_cache(self) -> bool:
         return self.cache_timeout is not None
 
@@ -422,31 +653,77 @@ class Widget(HTMLComponent):
                 self.widget_key,
                 self.cache_identifier(),
                 self.generate_state_hash(),
-            )
+            ),
         )
 
     def cache_identifier(self) -> str:
         user = self.user
-        return str(user.pk) if user and user.is_authenticated else "anonymous"
+
+        if user and user.is_authenticated:
+            return str(user.pk)
+
+        return "anonymous"
 
     def generate_state_hash(self) -> str:
         return "default"
 
-    # --------------------------------------------------------------------------
-    # HTTP Dispatch & Rendering
-    # --------------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # Rendering
+    # ------------------------------------------------------------------
+
     def get_context(self) -> dict[str, Any]:
+        """
+        Extend HTMLComponent context with widget-specific values.
+        """
         context = super().get_context()
+
         context.update(
             widget=self,
             request=self.request,
             children=self.get_children(),
             slots=self.slots,
         )
+
         return context
 
+    def render(
+        self,
+        request: HttpRequest | None = None,
+    ):
+        """
+        Render the widget through the HTMLComponent pipeline.
+
+        HTMLComponent decides whether rendering happens through:
+
+        - ``get_content()``, or
+        - ``template_name`` + ``get_context()``.
+        """
+        self.configure_htmx()
+
+        actual_request = (
+            request
+            if request is not None
+            else self.request
+        )
+
+        return super().render(
+            request=actual_request,
+        )
+
+    # ------------------------------------------------------------------
+    # HTTP Response
+    # ------------------------------------------------------------------
+
     def response(self) -> Response:
-        return Response.make(self.template_name, **self.get_context())
+        """
+        Build the HTTP response containing the widget's rendered HTML.
+
+        Rendering is intentionally performed by ``HTMLComponent`` rather
+        than duplicating template/content resolution here.
+        """
+        return Response.content(
+            self.render(request=self.request),
+        )
 
     def get(self) -> Response:
         return self.response()

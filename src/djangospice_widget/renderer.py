@@ -73,9 +73,9 @@ class WidgetRenderer:
 
 
 
-def render(widget, *, asset_registry=None) -> SafeString:
+def render(widget) -> SafeString:
     try:
-        content = WidgetRenderer(widget, asset_registry=asset_registry).render()
+        content = WidgetRenderer(widget).render()
         return mark_safe(content)
     except WidgetNotVisible:
         return mark_safe("")
